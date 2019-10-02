@@ -1,0 +1,29 @@
+{
+  "name": "pdf-to-image",
+  "author": "jongrant95@gmail.com",
+  "private": true,
+  "version": "0.1.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "precommit": "lint-staged"
+  },
+  "lint-staged": {
+    "{src,test}/**/*.js": [
+      "prettier --print-width 100 --single-quote --trailing-comma all --no-semi --write",
+      "git add"
+    ]
+  },
+  "license": "MIT",
+  "dependencies": {
+    "canvas": "2.6.0",
+    "express": "4.17.1",
+    "pdfjs-dist": "2.1.266",
+    "rxjs": "^6.5.3"
+  },
+  "devDependencies": {
+    "lint-staged": "^7.3.0",
+    "prettier": "^1.14.3"
+  }
+}
