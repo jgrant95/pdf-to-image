@@ -24,14 +24,7 @@ app.post('/', async (req, res, next) => {
       output = "jpeg";
     }
 
-    console.log(req.rawBody);
-    // var base64Data = req.rawBody.replace(/^data:image\/png;base64,/, "");
-
     converter.pdfToImages(req.rawBody).then(function (zip) {
-      // console.log('z', zip)
-      // var image1 = images ? images[0] : ''
-      // console.log(image1)
-
       res.set({
           'Content-Type': 'application/zip',
           'Content-Length': zip.length,
