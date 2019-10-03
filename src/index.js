@@ -27,17 +27,17 @@ app.post('/', async (req, res, next) => {
     console.log(req.rawBody);
     // var base64Data = req.rawBody.replace(/^data:image\/png;base64,/, "");
 
-    var images = converter.pdfToImages(req.rawBody).then(function (pages) {
-    console.log('images', images)
-    var image1 = images ? images[0] : ''
-    console.log(image1)
+    converter.pdfToImages(req.rawBody).then(function (zip) {
+      // console.log('z', zip)
+      // var image1 = images ? images[0] : ''
+      // console.log(image1)
 
-    res.set({
-        'Content-Type': 'image/jpeg',
-        'Content-Length': image1.length,
-      })
-      .send(image1)
-    next();
+      res.set({
+          'Content-Type': 'application/zip',
+          'Content-Length': zip.length,
+        })
+        .send(zip)
+      next();
     })
   });
 })
