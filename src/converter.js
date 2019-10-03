@@ -29,6 +29,8 @@ async function pdfToImages(pdfData, options = {}) {
     };
 
     return page.render(renderContext).promise.then(() => {
+      // can have compression levels and qualities from canvas specified here
+      // make toBuffer async
       var image = canvasAndContext.canvas.toBuffer();
       zip.file('test ' + i + '.jpeg', image, {binary: true})
     })
