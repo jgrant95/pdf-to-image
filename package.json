@@ -20,7 +20,7 @@
     "canvas": "2.6.0",
     "express": "4.17.1",
     "jszip": "^3.2.2",
-    "pdfjs-dist": "2.2.228",
+    "pdfjs-dist": "^2.1.266",
     "rxjs": "^6.5.3",
     "webpack": "^4.41.0"
   },
