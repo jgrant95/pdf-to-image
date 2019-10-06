@@ -12,29 +12,31 @@ app.post('/', async (req, res, next) => {
   req.on('data', function (chunk) {
     data = Buffer.concat([data, chunk]);
   });
-  req.on('end', function () {
-    req.rawBody = data;
+  req.on('end', async () => {
+      req.rawBody = data;
 
-    let {
-      output,
-      ...options
-    } = req.query
+      let {
+        output,
+        ...options
+      } = req.query
 
-    if (!output) {
-      output = "jpeg";
-    }
+      if (!output) {
+        output = "jpeg";
+      }
 
-    converter.pdfToImages(req.rawBody).then(function (zip) {
+      const zip = await converter.pdfToImages(req.rawBody)
+
       res.set({
           'Content-Type': 'application/zip',
           'Content-Length': zip.length,
         })
         .send(zip)
       next();
+    },
+    (err) => {
+      console.log('ooops, looks like pdf failed to convert image', err)
     })
-  });
 })
-
 // Error page. - not working
 app.use((err, req, res, next) => {
   console.error(err)
