@@ -37,13 +37,36 @@ async function pdfToImages(pdfData, options = {}) {
         scale: 1.0
       });
 
-      var canvasFactory = new NodeCanvasFactory();
-      var canvasAndContext =
-        canvasFactory.create(viewport.width, viewport.height);
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--headless' ],
+      })
+
+      var browserPage = await browser.newPage();
+      console.log('puppeteer page created')
+      browserPage.on('console', (log) => console[log._type](log._text));
+
+      browserPage.setContent(htmlContent)
+
+      var context = await browserPage.evaluate((width, height) => {
+        var canvas = document.getElementById('canvas');
+        canvas.width = width
+        canvas.height = height
+
+        document.body.appendChild(canvas);
+        
+        var ctx = canvas.getContext('2d'); 
+        ctx.width = width
+        ctx.height = height
+
+        return ctx;
+      }, viewport.width, viewport.height);
+
+      console.log('we hav da context!', context, context.width, context.height)
+
       var renderContext = {
-        canvasContext: canvasAndContext.context,
-        viewport: viewport,
-        canvasFactory: canvasFactory,
+        canvasContext: context,
+        viewport: viewport
       };
 
       return pdfPage.render(renderContext).promise.then(async () => {
@@ -67,73 +90,6 @@ async function pdfToImages(pdfData, options = {}) {
     console.log('oops err: ', err)
   }
 }
-
-function NodeCanvasFactory() {}
-NodeCanvasFactory.prototype = {
-  create: function NodeCanvasFactory_create(width, height) {
-    assert(width > 0 && height > 0, 'Invalid canvas size');
-
-    this.pup()
-
-    console.log('createMethod', t)
-
-    return t;
-  },
-
-  reset: function NodeCanvasFactory_reset(canvasAndContext, width, height) {
-    assert(canvasAndContext.canvas, 'Canvas is not specified');
-    assert(width > 0 && height > 0, 'Invalid canvas size');
-    canvasAndContext.canvas.width = width;
-    canvasAndContext.canvas.height = height;
-  },
-
-  destroy: function NodeCanvasFactory_destroy(canvasAndContext) {
-    assert(canvasAndContext.canvas, 'Canvas is not specified');
-
-    // Zeroing the width and height cause Firefox to release graphics
-    // resources immediately, which can greatly reduce memory consumption.
-    canvasAndContext.canvas.width = 0;
-    canvasAndContext.canvas.height = 0;
-    canvasAndContext.canvas = null;
-    canvasAndContext.context = null;
-  },
-
-  pup: function NodeCanvasFactory_pup() {
-    return new Promise((resolve, reject) => {
-
-      return resolve(puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--headless'],
-      }).then(browser => {
-        return 'hey';
-
-        return browser.newPage(browserPage => {
-          console.log('puppeteer page created')
-          browserPage.on('console', (log) => console[log._type](log._text));
-
-          browserPage.setContent(htmlContent)
-
-          return browserPage.evaluate((width, height) => {
-            var canvas = document.getElementById('canvas');
-            canvas.width = width
-            canvas.height = height
-
-            document.body.appendChild(canvas);
-
-            var ctx = canvas.getContext('2d');
-            ctx.width = width
-            ctx.height = height
-
-            return {
-              canvas: canvas,
-              context: ctx,
-            };
-          }, viewport.width, viewport.height);
-        });
-      }))
-    })
-  }
-};
 
 module.exports = {
   pdfToImages
