@@ -11,40 +11,13 @@ const htmlContent = `
   <html>
     <head><meta charset='UTF-8'><title>Test</title></head>
     <body>Test</body>
+    <canvas id="canvas" width="200" height="100"></canvas>
   </html>
 `;
 
 async function pdfToImages(pdfData, options = {}) {
-  // const browser = await puppeteer.launch({
-  //   headless: true,
-  //   args: ['--no-sandbox', '--headless'],
-  // })
-
-  // var page = await browser.newPage();
-  // console.log('puppeteer page created')
-
-  // // await page.evaluateOnNewDocument(() => {
-  // //   window.foobar = Math.random() * 1000;
-  // // });
-  // await page.goto('about:blank');
-
-  // await page.evaluate(() => {
-  //   var canvas = document.createElement('canvas');
-  //   console.log(canvas)
-  //   document.body.appendChild(canvas);
-  //   // return '1';
-  // });
-
-  // await page.evaluate((doc) => {
-  //   // console.log('evaluating dom...', doc)
-  //   console.log('iinner', doc)
-
-  //   let canvas = doc.createElement("canvas");
-
-  //   console.log('puppeteer canvas: ', canvas)
-  // });
-
   const zip = new JSZip()
+
   const pdf = await pdfjsLib.getDocument({
     data: pdfData
   }).promise
@@ -58,71 +31,53 @@ async function pdfToImages(pdfData, options = {}) {
 
   const pages = await Promise.all(promises)
 
-  const renderedPages = pages.map((page, i) => {
-    const viewport = page.getViewport({
-      scale: 1.0
-    });
+  try {
+    const renderedPages = pages.map(async (pdfPage, i) => {
+      const viewport = pdfPage.getViewport({
+        scale: 1.0
+      });
 
-    var canvasFactory = new NodeCanvasFactory();
-    var canvasAndContext =
-      canvasFactory.create(viewport.width, viewport.height);
-    var renderContext = {
-      canvasContext: canvasAndContext.context,
-      viewport: viewport,
-      canvasFactory: canvasFactory,
-    };
+      var canvasFactory = new NodeCanvasFactory();
+      var canvasAndContext =
+        canvasFactory.create(viewport.width, viewport.height);
+      var renderContext = {
+        canvasContext: canvasAndContext.context,
+        viewport: viewport,
+        canvasFactory: canvasFactory,
+      };
 
-    return page.render(renderContext).promise.then(() => {
-      // can have compression levels and qualities from canvas specified here
-      // make toBuffer async
-      var image = canvasAndContext.canvas.toBuffer();
-      zip.file('test ' + i + '.jpeg', image, {
-        binary: true
+      return pdfPage.render(renderContext).promise.then(async () => {
+        // can have compression levels and qualities from canvas specified here
+        // make toBuffer async
+        var image = canvasAndContext.canvas.toBuffer();
+        zip.file('test ' + i + '.jpeg', image, {
+          binary: true
+        })
+
+        await browser.close()
       })
     })
-  })
 
-  await Promise.all(renderedPages)
+    await Promise.all(renderedPages)
 
-  await browser.close()
-
-  return zip.generateAsync({
-    type: 'nodebuffer'
-  }).catch(err => console.log('error', err));
+    return zip.generateAsync({
+      type: 'nodebuffer'
+    }).catch(err => console.log('error', err));
+  } catch (err) {
+    console.log('oops err: ', err)
+  }
 }
 
 function NodeCanvasFactory() {}
 NodeCanvasFactory.prototype = {
-  create: async function NodeCanvasFactory_create(width, height) {
+  create: function NodeCanvasFactory_create(width, height) {
     assert(width > 0 && height > 0, 'Invalid canvas size');
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--headless'],
-    })
 
-    var page = await browser.newPage();
-    console.log('puppeteer page created')
+    this.pup()
 
-    // await page.evaluateOnNewDocument(() => {
-    //   window.foobar = Math.random() * 1000;
-    // });
-    await page.goto('about:blank');
+    console.log('createMethod', t)
 
-    return page.evaluate().then(() => {
-      var c = document.createElement('canvas');
-      c.width = width
-      c.height = height
-      console.log(c)
-      document.body.appendChild(c);
-
-      console.log('node canvas: ', c)
-
-      var context = c.getContext('2d');
-      return {
-        canvas: c,
-        context: context,
-      };
-    });
+    return t;
   },
 
   reset: function NodeCanvasFactory_reset(canvasAndContext, width, height) {
@@ -142,6 +97,42 @@ NodeCanvasFactory.prototype = {
     canvasAndContext.canvas = null;
     canvasAndContext.context = null;
   },
+
+  pup: function NodeCanvasFactory_pup() {
+    return new Promise((resolve, reject) => {
+
+      return resolve(puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--headless'],
+      }).then(browser => {
+        return 'hey';
+
+        return browser.newPage(browserPage => {
+          console.log('puppeteer page created')
+          browserPage.on('console', (log) => console[log._type](log._text));
+
+          browserPage.setContent(htmlContent)
+
+          return browserPage.evaluate((width, height) => {
+            var canvas = document.getElementById('canvas');
+            canvas.width = width
+            canvas.height = height
+
+            document.body.appendChild(canvas);
+
+            var ctx = canvas.getContext('2d');
+            ctx.width = width
+            ctx.height = height
+
+            return {
+              canvas: canvas,
+              context: ctx,
+            };
+          }, viewport.width, viewport.height);
+        });
+      }))
+    })
+  }
 };
 
 module.exports = {
