@@ -38,8 +38,8 @@ async function pdfToImages(pdfData, options = {}) {
       });
 
       const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--headless' ],
+        headless: false,
+        args: ['--no-sandbox' ],
       })
 
       var browserPage = await browser.newPage();
@@ -48,37 +48,50 @@ async function pdfToImages(pdfData, options = {}) {
 
       browserPage.setContent(htmlContent)
 
-      var context = await browserPage.evaluate((width, height) => {
+      browserPage.evaluate((viewport, pdfPage) => {
+        console.log(i + ' evaluating...')
+
         var canvas = document.getElementById('canvas');
-        canvas.width = width
-        canvas.height = height
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+
+        console.log(i + ' canvas configured...')
 
         document.body.appendChild(canvas);
-        
-        var ctx = canvas.getContext('2d'); 
-        ctx.width = width
-        ctx.height = height
 
-        return ctx;
-      }, viewport.width, viewport.height);
+        console.log(i + ' canvas appended...')
 
-      console.log('we hav da context!', context, context.width, context.height)
+        var context = canvas.getContext('2d');        
 
-      var renderContext = {
-        canvasContext: context,
-        viewport: viewport
-      };
+        var renderContext = {
+          canvasContext: context.jsonValue(),
+          viewport: viewport
+        };
 
-      return pdfPage.render(renderContext).promise.then(async () => {
-        // can have compression levels and qualities from canvas specified here
-        // make toBuffer async
-        var image = canvasAndContext.canvas.toBuffer();
-        zip.file('test ' + i + '.jpeg', image, {
-          binary: true
+        console.log(i + ' render context generated...')
+  
+        var renderedTask = pdfPage.render(renderContext);
+
+        console.log(i + ' rendering...')
+  
+        renderedTask.promise.then(async function(x) {  
+          console.log(i + ' rendered...')
+
+          var canvasAndContext = x.canvasAndContext;
+          // can have compression levels and qualities from canvas specified here
+          // make toBuffer async
+          var image = canvasAndContext.canvas.toBuffer();
+          zip.file('test ' + i + '.jpeg', image, {
+            binary: true
+          })
+
+          console.log(i + ' image added to zip...')
         })
+      }, viewport, pdfPage);
 
-        await browser.close()
-      })
+      console.log(i + ' closing browser...')
+
+      await browser.close()
     })
 
     await Promise.all(renderedPages)
