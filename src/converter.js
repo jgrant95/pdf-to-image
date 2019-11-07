@@ -15,41 +15,65 @@ const htmlContent = `
   </html>
 `;
 
-async function pdfToImages(pdfData, options = {}) {
-  const zip = new JSZip()
-
-  const pdf = await pdfjsLib.getDocument({
+async function getPdf(pdfData) {
+  return await pdfjsLib.getDocument({
     data: pdfData
   }).promise
-  const numPages = pdf.numPages
+}
 
-  const pageNumbers = Array.from({
-    length: numPages
-  }).map((u, i) => i + 1)
-
-  const promises = pageNumbers.map(pageNo => pdf.getPage(pageNo))
-
-  const pages = await Promise.all(promises)
+async function pdfToImages(pdfData, options = {}) {
+  const zip = new JSZip()  
 
   try {
-    const renderedPages = pages.map(async (pdfPage, i) => {
-      const viewport = pdfPage.getViewport({
-        scale: 1.0
-      });
+    const browser = await puppeteer.launch({
+      headless: false,
+      args: ['--no-sandbox'],
+    })
 
-      const browser = await puppeteer.launch({
-        headless: false,
-        args: ['--no-sandbox' ],
-      })
+    var browserPage = await browser.newPage();
+    console.log(pdfData);
+    await browserPage.exposeFunction('getPdf', () => getPdf(pdfData));
 
-      var browserPage = await browser.newPage();
-      console.log('puppeteer page created')
-      browserPage.on('console', (log) => console[log._type](log._text));
+    console.log('puppeteer page created')
 
-      browserPage.setContent(htmlContent)
+    browserPage.on('console', (log) => console[log._type](log._text));
 
-      browserPage.evaluate((viewport, pdfPage) => {
+    await browserPage.setContent(htmlContent)
+
+    // const jsHandle = await browserPage.evaluateHandle(() => {
+    //   const element = document.getElementById('canvas');
+    //   canvas.width = 200
+    //   canvas.height = 800
+      
+    //   console.log('handle world', element)
+    //   return element;
+    // });
+
+    // console.log(await jsHandle.jsonValue()); // JSHandle
+  
+    // const result = await browserPage.evaluate(e => console.log(e.jsonValue()), jsHandle);
+    // console.log('canvas', result); // it will log the string 'Example Domain'   
+
+    await browserPage.evaluate(async () => {
+      console.log('beginning evaluation...')    
+      
+      const pdf = await getPdf()
+      const numPages = pdf.numPages  
+    
+      const pageNumbers = Array.from({
+        length: numPages
+      }).map((u, i) => i + 1)
+    
+      const promises = pageNumbers.map(pageNo => pdf.getPage(pageNo))
+    
+      const pages = await Promise.all(promises)
+
+      var renderedPages = pages.map(async (pdfPage, i) => {
         console.log(i + ' evaluating...')
+
+        const viewport = pdfPage.getViewport({
+          scale: 1.0
+        });
 
         var canvas = document.getElementById('canvas');
         canvas.width = viewport.width
@@ -61,44 +85,29 @@ async function pdfToImages(pdfData, options = {}) {
 
         console.log(i + ' canvas appended...')
 
-        var context = canvas.getContext('2d');        
+        var context = canvas.getContext('2d');
 
         var renderContext = {
-          canvasContext: context.jsonValue(),
+          canvasContext: context,
           viewport: viewport
         };
 
         console.log(i + ' render context generated...')
-  
-        var renderedTask = pdfPage.render(renderContext);
 
-        console.log(i + ' rendering...')
-  
-        renderedTask.promise.then(async function(x) {  
-          console.log(i + ' rendered...')
+        return renderContext;
+      });
 
-          var canvasAndContext = x.canvasAndContext;
-          // can have compression levels and qualities from canvas specified here
-          // make toBuffer async
-          var image = canvasAndContext.canvas.toBuffer();
-          zip.file('test ' + i + '.jpeg', image, {
-            binary: true
-          })
+      var renderContexts = await Promise.all(renderedPages)
+    }).catch(err => console.log('error2', err));
 
-          console.log(i + ' image added to zip...')
-        })
-      }, viewport, pdfPage);
+    console.log('page rendered');
 
-      console.log(i + ' closing browser...')
-
-      await browser.close()
-    })
-
-    await Promise.all(renderedPages)
+    // work this out once code is working!
+    // await browser.close()
 
     return zip.generateAsync({
       type: 'nodebuffer'
-    }).catch(err => console.log('error', err));
+    }).catch(err => console.log('error1', err));
   } catch (err) {
     console.log('oops err: ', err)
   }
