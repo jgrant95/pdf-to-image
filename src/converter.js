@@ -15,7 +15,13 @@ const htmlContent = `
   </html>
 `;
 
-async function getPdf(pdfData) {
+async function getPdf(pdfDataString) {
+  const pdfData = JSON.parse(pdfDataString, (key, value) => {
+    return value && value.type === 'Buffer' ?
+      Buffer.from(value.data) :
+      value;
+  });
+  
   return await pdfjsLib.getDocument({
     data: pdfData
   }).promise
@@ -32,7 +38,7 @@ async function pdfToImages(pdfData, options = {}) {
 
     var browserPage = await browser.newPage();
     console.log(pdfData);
-    await browserPage.exposeFunction('getPdf', () => getPdf(pdfData));
+    await browserPage.exposeFunction('getPdf', (pdfData) => getPdf(pdfData));
 
     console.log('puppeteer page created')
 
@@ -53,11 +59,11 @@ async function pdfToImages(pdfData, options = {}) {
   
     // const result = await browserPage.evaluate(e => console.log(e.jsonValue()), jsHandle);
     // console.log('canvas', result); // it will log the string 'Example Domain'   
+    const pdfBufferString = JSON.stringify(pdfData);
 
-    await browserPage.evaluate(async () => {
-      console.log('beginning evaluation...')    
+    await browserPage.evaluate(async (pdfDataString) => {     
       
-      const pdf = await getPdf()
+      const pdf = await getPdf(pdfDataString)
       const numPages = pdf.numPages  
     
       const pageNumbers = Array.from({
@@ -98,7 +104,7 @@ async function pdfToImages(pdfData, options = {}) {
       });
 
       var renderContexts = await Promise.all(renderedPages)
-    }).catch(err => console.log('error2', err));
+    }, pdfBufferString).catch(err => console.log('error2', err));
 
     console.log('page rendered');
 
