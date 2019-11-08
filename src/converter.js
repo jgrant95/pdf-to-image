@@ -2,12 +2,17 @@
 
 const pdfjsLib = require('pdfjs-dist');
 const Canvas = require('canvas')
+Canvas.registerFont('src/assets/fonts/Helvetica.ttf',  { family: 'Helvetica', weight: 'bold' })
+Canvas.registerFont('src/assets/fonts/Helvetica.ttf',  { family: 'Helvetica' })
+Canvas.registerFont('src/assets/fonts/Helvetica.ttf',  { family: 'Arial' })
+Canvas.registerFont('src/assets/fonts/Helvetica.ttf',  { family: 'ArialMT' })
+
 var JSZip = require("jszip");
 var assert = require('assert');
 
 async function pdfToImages(pdfData, options = {}) {
   const zip = new JSZip()
-  const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise
+  const pdf = await pdfjsLib.getDocument({ data: pdfData, disableFontFace: true }).promise
   const numPages = pdf.numPages
   
   const pageNumbers = Array.from({ length: numPages }).map((u, i) => i+1)
