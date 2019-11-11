@@ -1,7 +1,8 @@
-FROM node:dubnium
+FROM node:13.1.0-alpine
 
 #RUN apt-get update 
 # && apt-get -y install ttf-freefont
+RUN apk add --no-cache gettext librsvg ghostscript imagemagick
 
 ENV APPDIR /usr/src/app
 RUN mkdir -p ${APPDIR}
