@@ -5,19 +5,33 @@ const Canvas = require('canvas')
 var JSZip = require("jszip");
 var assert = require('assert');
 
+Canvas.registerFont('./src/assets/Helvetica.ttf', {
+  family: 'helvetica'
+})
+
+Canvas.registerFont('./src/assets/times.ttf', {
+  family: 'times'
+})
+
 async function pdfToImages(pdfData, options = {}) {
   const zip = new JSZip()
-  const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise
+  const pdf = await pdfjsLib.getDocument({
+    data: pdfData
+  }).promise
   const numPages = pdf.numPages
-  
-  const pageNumbers = Array.from({ length: numPages }).map((u, i) => i+1)
+
+  const pageNumbers = Array.from({
+    length: numPages
+  }).map((u, i) => i + 1)
 
   const promises = pageNumbers.map(pageNo => pdf.getPage(pageNo))
 
   const pages = await Promise.all(promises)
 
   const renderedPages = pages.map((page, i) => {
-    const viewport = page.getViewport({scale: 1.0});
+    const viewport = page.getViewport({
+      scale: 1.0
+    });
 
     var canvasFactory = new NodeCanvasFactory();
     var canvasAndContext =
@@ -32,13 +46,17 @@ async function pdfToImages(pdfData, options = {}) {
       // can have compression levels and qualities from canvas specified here
       // make toBuffer async
       var image = canvasAndContext.canvas.toBuffer();
-      zip.file('test ' + i + '.jpeg', image, {binary: true})
+      zip.file('test ' + i + '.jpeg', image, {
+        binary: true
+      })
     })
   })
 
   await Promise.all(renderedPages)
 
-  return zip.generateAsync({type: 'nodebuffer'}).catch(err => console.log('error', err));
+  return zip.generateAsync({
+    type: 'nodebuffer'
+  }).catch(err => console.log('error', err));
 }
 
 function NodeCanvasFactory() {}
