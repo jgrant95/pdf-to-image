@@ -18,7 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "canvas": "2.6.0",
-    "express": "4.17.1",
+    "express": "4.17.3",
     "fs": "0.0.1-security",
     "jszip": "^3.2.2",
     "node-poppler": "^1.6.0",
