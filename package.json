@@ -20,7 +20,7 @@
     "canvas": "2.6.0",
     "express": "4.17.1",
     "fs": "0.0.1-security",
-    "jszip": "^3.2.2",
+    "jszip": "^3.8.0",
     "node-poppler": "^1.6.0",
     "path": "^0.12.7",
     "pdfjs-dist": "^2.3.200",
